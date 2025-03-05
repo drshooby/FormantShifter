@@ -1,9 +1,10 @@
 use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{FromSample, Sample};
+use cpal::{FromSample, Sample, SampleFormat};
 use std::fs::File;
 use std::io::BufWriter;
 use std::sync::{Arc, Mutex};
+use std::thread::sleep;
 
 /**
 Code from: https://github.com/RustAudio/cpal/blob/master/examples/record_wav.rs
@@ -30,6 +31,7 @@ struct Opt {
     #[allow(dead_code)]
     jack: bool,
 }
+
 
 pub(crate) fn record_audio(seconds: u64) -> Result<(), anyhow::Error> {
     let opt = Opt::parse();
@@ -91,7 +93,13 @@ pub(crate) fn record_audio(seconds: u64) -> Result<(), anyhow::Error> {
     let writer = Arc::new(Mutex::new(Some(writer)));
 
     // A flag to indicate that recording is in progress.
-    println!("Begin recording...");
+    println!("Begin recording in...");
+    println!("3");
+    sleep(std::time::Duration::from_secs(1));
+    println!("2");
+    sleep(std::time::Duration::from_secs(1));
+    println!("1");
+    println!("Started!");
 
     // Run the input stream on a separate thread.
     let writer_2 = writer.clone();
@@ -101,25 +109,25 @@ pub(crate) fn record_audio(seconds: u64) -> Result<(), anyhow::Error> {
     };
 
     let stream = match config.sample_format() {
-        cpal::SampleFormat::I8 => device.build_input_stream(
+        SampleFormat::I8 => device.build_input_stream(
             &config.into(),
             move |data, _: &_| write_input_data::<i8, i8>(data, &writer_2),
             err_fn,
             None,
         )?,
-        cpal::SampleFormat::I16 => device.build_input_stream(
+        SampleFormat::I16 => device.build_input_stream(
             &config.into(),
             move |data, _: &_| write_input_data::<i16, i16>(data, &writer_2),
             err_fn,
             None,
         )?,
-        cpal::SampleFormat::I32 => device.build_input_stream(
+        SampleFormat::I32 => device.build_input_stream(
             &config.into(),
             move |data, _: &_| write_input_data::<i32, i32>(data, &writer_2),
             err_fn,
             None,
         )?,
-        cpal::SampleFormat::F32 => device.build_input_stream(
+        SampleFormat::F32 => device.build_input_stream(
             &config.into(),
             move |data, _: &_| write_input_data::<f32, f32>(data, &writer_2),
             err_fn,
@@ -134,14 +142,14 @@ pub(crate) fn record_audio(seconds: u64) -> Result<(), anyhow::Error> {
 
     stream.play()?;
 
-    std::thread::sleep(std::time::Duration::from_secs(seconds));
+    sleep(std::time::Duration::from_secs(seconds));
     drop(stream);
     writer.lock().unwrap().take().unwrap().finalize()?;
     println!("Recording {} complete!", PATH);
     Ok(())
 }
 
-fn sample_format(format: cpal::SampleFormat) -> hound::SampleFormat {
+fn sample_format(format: SampleFormat) -> hound::SampleFormat {
     if format.is_float() {
         hound::SampleFormat::Float
     } else {
